@@ -9,6 +9,33 @@
     @include('models-scanner::partials.styles')
 </head>
 <body>
+    <form action="" style="margin-bottom: 20px">
+        <input type="text" name="search" value="{{ $request->query('search') }}" size="30" placeholder="Rechercher">
+        dans
+        <select name="search_on" onchange="this.form.submit()">
+            <option value="table" @selected(! $request->filled('search_on') || $request->query('search_on') === 'table')>Table</option>
+            <option value="model" @selected($request->query('search_on') === 'model')>Modèle</option>
+            <option value="relation_name" @selected($request->query('search_on') === 'relation_name')>Nom de relation</option>
+            <option value="relation_model" @selected($request->query('search_on') === 'relation_model')>Modèle lié</option>
+            <option value="relation_schema" @selected($request->query('search_on') === 'relation_schema')>Schéma de relation</option>
+        </select>
+        et filter sur
+        <select name="filter" onchange="this.form.submit()">
+            <option value=""></option>
+            <option value="tables_without_model" @selected($request->query('filter') === 'tables_without_model')>Tables sans modèle</option>
+            <option value="defined_relations" @selected($request->query('filter') === 'defined_relations')>Relations définies</option>
+            <option value="undefined_relations" @selected($request->query('filter') === 'undefined_relations')>Relations non définies</option>
+            <option value="untyped_relations" @selected($request->query('filter') === 'untyped_relations')>Relations non typées</option>
+            <option value="errors" @selected($request->query('filter') === 'errors')>Erreurs</option>
+        </select>
+
+        @if ($request->anyFilled(['search', 'filter']))
+            <a href="/_models">Réinitialiser</a>
+        @endif
+
+        <input type="submit" style="display:none">
+    </form>
+
     @foreach ($mergedInfos as $mergedInfo)
         <div class="head">
             <strong>{!! $mergedInfo['table_name'] !!} :</strong>
