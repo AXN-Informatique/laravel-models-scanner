@@ -9,6 +9,7 @@ use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Schema\ForeignKeyConstraint;
 use Illuminate\Database\Connection as LaravelConnection;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 final class DatabaseScanner
 {
@@ -54,13 +55,13 @@ final class DatabaseScanner
         return [
             'type' => 'BelongsTo',
             'constraint' => $this->unquoteIdentifier($fk->getObjectName()->toString()),
-            'local_column' =>  $this->unquoteIdentifier($fk->getLocalColumns()[0]),
+            'local_column' => $this->unquoteIdentifier($fk->getLocalColumns()[0]),
             'foreign_table' => $this->unquoteIdentifier($fk->getForeignTableName()),
             'foreign_column' => $this->unquoteIdentifier($fk->getForeignColumns()[0]),
         ];
     }
 
-    private function getForeignKeyInverseInfo(array $fkInfo, $foreignTable): array
+    private function getForeignKeyInverseInfo(array $fkInfo, string $foreignTable): array
     {
         return [
             'type' => 'HasMany',
@@ -79,29 +80,30 @@ final class DatabaseScanner
         if (method_exists($laravelConn, 'getDoctrineConnection')) {
             /** @var DbalConnection $conn */
             $conn = $laravelConn->getDoctrineConnection();
+
             return $conn;
         }
 
         $cfg = $laravelConn->getConfig();
 
         $driver = match ($cfg['driver'] ?? null) {
-            'mysql'  => 'pdo_mysql',
-            'pgsql'  => 'pdo_pgsql',
+            'mysql' => 'pdo_mysql',
+            'pgsql' => 'pdo_pgsql',
             'sqlite' => 'pdo_sqlite',
             'sqlsrv' => 'pdo_sqlsrv',
-            default  => throw new \RuntimeException('Driver non supporté pour DBAL.'),
+            default => throw new RuntimeException('Driver non supporté pour DBAL.'),
         };
 
         $params = array_filter([
-            'driver'   => $driver,
-            'host'     => $cfg['host'] ?? null,
-            'port'     => $cfg['port'] ?? null,
-            'dbname'   => $cfg['database'] ?? null,
-            'user'     => $cfg['username'] ?? null,
+            'driver' => $driver,
+            'host' => $cfg['host'] ?? null,
+            'port' => $cfg['port'] ?? null,
+            'dbname' => $cfg['database'] ?? null,
+            'user' => $cfg['username'] ?? null,
             'password' => $cfg['password'] ?? null,
-            'charset'  => $cfg['charset'] ?? null,
-            'path'     => ($cfg['driver'] ?? null) === 'sqlite' ? ($cfg['database'] ?? null) : null,
-        ], static fn ($v) => $v !== null && $v !== '');
+            'charset' => $cfg['charset'] ?? null,
+            'path' => ($cfg['driver'] ?? null) === 'sqlite' ? ($cfg['database'] ?? null) : null,
+        ], static fn ($v): bool => $v !== null && $v !== '');
 
         return DriverManager::getConnection($params);
     }
@@ -118,6 +120,7 @@ final class DatabaseScanner
     private function unquoteIdentifier(string $identifier): string
     {
         $identifier = trim($identifier);
+
         if ($identifier === '') {
             return $identifier;
         }
@@ -128,20 +131,23 @@ final class DatabaseScanner
             $p = trim($part);
 
             // 1) Brackets SQL Server: [name]
-            if (str_starts_with($p, '[') && str_ends_with($p, ']') && strlen($p) >= 2) {
+            if (str_starts_with($p, '[') && str_ends_with($p, ']') && \strlen($p) >= 2) {
                 $inner = substr($p, 1, -1);
+
                 return str_replace(']]', ']', $inner);
             }
 
             // 2) Double quotes: "name"
-            if (str_starts_with($p, '"') && str_ends_with($p, '"') && strlen($p) >= 2) {
+            if (str_starts_with($p, '"') && str_ends_with($p, '"') && \strlen($p) >= 2) {
                 $inner = substr($p, 1, -1);
+
                 return str_replace('""', '"', $inner);
             }
 
             // 3) Backticks: `name`
-            if (str_starts_with($p, '`') && str_ends_with($p, '`') && strlen($p) >= 2) {
+            if (str_starts_with($p, '`') && str_ends_with($p, '`') && \strlen($p) >= 2) {
                 $inner = substr($p, 1, -1);
+
                 return str_replace('``', '`', $inner);
             }
 
@@ -159,28 +165,29 @@ final class DatabaseScanner
     {
         $out = [];
         $buf = '';
-        $len = strlen($identifier);
+        $len = \strlen($identifier);
 
         $inDouble = false;
-        $inBack   = false;
-        $inBrack  = false;
+        $inBack = false;
+        $inBrack = false;
 
         for ($i = 0; $i < $len; $i++) {
             $ch = $identifier[$i];
 
-            if (!$inBack && !$inBrack && $ch === '"') {
-                $inDouble = !$inDouble;
-            } elseif (!$inDouble && !$inBrack && $ch === '`') {
-                $inBack = !$inBack;
-            } elseif (!$inDouble && !$inBack && $ch === '[') {
+            if (! $inBack && ! $inBrack && $ch === '"') {
+                $inDouble = ! $inDouble;
+            } elseif (! $inDouble && ! $inBrack && $ch === '`') {
+                $inBack = ! $inBack;
+            } elseif (! $inDouble && ! $inBack && $ch === '[') {
                 $inBrack = true;
             } elseif ($inBrack && $ch === ']') {
                 $inBrack = false;
             }
 
-            if ($ch === '.' && !$inDouble && !$inBack && !$inBrack) {
+            if ($ch === '.' && ! $inDouble && ! $inBack && ! $inBrack) {
                 $out[] = $buf;
                 $buf = '';
+
                 continue;
             }
 

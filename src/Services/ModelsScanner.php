@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionNamedType;
+use ReflectionType;
 use Throwable;
 
 final class ModelsScanner
@@ -24,7 +25,7 @@ final class ModelsScanner
         $result = [];
 
         foreach (array_keys($classmap) as $class) {
-            if (! preg_match(config('models-scanner.models_namespace_regex'), $class)) {
+            if (! preg_match(config('models-scanner.models_namespace_regex'), (string) $class)) {
                 continue;
             }
 
@@ -62,15 +63,18 @@ final class ModelsScanner
         return $result;
     }
 
-    private function getModelRelationInfo(Model $model, ReflectionMethod $method)
+    /**
+     * @return mixed[]
+     */
+    private function getModelRelationInfo(Model $model, ReflectionMethod $method): array
     {
         try {
             $relation = $model->{$method->getName()}();
 
-        } catch (Throwable $e) {
+        } catch (Throwable $throwable) {
             return [
                 'method_name' => $method->getName(),
-                'error' => $e->getMessage(),
+                'error' => $throwable->getMessage(),
             ];
         }
 
@@ -79,7 +83,7 @@ final class ModelsScanner
             'miss_return_type' => ! $method->getReturnType() instanceof ReflectionNamedType,
             'declaration_source' => $this->getDeclaringTraitNameWithAliases($method) ?? $method->getDeclaringClass()->getName(),
             'type' => class_basename($relation::class),
-            'with_trashed' => $this->usesSoftDeletes($relation->getRelated()) ? in_array(
+            'with_trashed' => $this->usesSoftDeletes($relation->getRelated()) ? \in_array(
                 SoftDeletingScope::class,
                 $relation->getQuery()->removedScopes(),
                 true
@@ -94,7 +98,7 @@ final class ModelsScanner
             return $info;
         }
 
-        $info['related_model_class'] = get_class($relation->getRelated());
+        $info['related_model_class'] = $relation->getRelated()::class;
         $info['foreign_table'] = $relation->getRelated()->getTable();
 
         if ($relation instanceof HasOneOrMany) {
@@ -122,7 +126,7 @@ final class ModelsScanner
         } else {
             return [
                 'method_name' => $method->getName(),
-                'error' => 'Unrecognized relation: '.get_class($relation),
+                'error' => 'Unrecognized relation: '.$relation::class,
             ];
         }
 
@@ -131,7 +135,7 @@ final class ModelsScanner
 
     private function usesSoftDeletes(Model $model): bool
     {
-        return in_array(SoftDeletes::class, class_uses_recursive($model));
+        return \in_array(SoftDeletes::class, class_uses_recursive($model));
     }
 
     private function methodIsRelation(ReflectionMethod $method): bool
@@ -141,21 +145,21 @@ final class ModelsScanner
         }
 
         if ($method->getReturnType() instanceof ReflectionNamedType) {
-            return strpos($method->getReturnType()->getName(), 'Illuminate\Database\Eloquent\Relations\\') === 0;
+            return str_starts_with($method->getReturnType()->getName(), 'Illuminate\Database\Eloquent\Relations\\');
         }
 
         // Le type de retour est précisé mais est composite donc on ne gère pas
-        if ($method->getReturnType() !== null) {
+        if ($method->getReturnType() instanceof ReflectionType) {
             return false;
         }
 
-        if ($method->getDeclaringClass()->getName() === 'Illuminate\Database\Eloquent\Model') {
+        if ($method->getDeclaringClass()->getName() === Model::class) {
             return false;
         }
 
         return preg_match(
             '/(\{|;)\s*return\s*\$this\s*->\s*(belongsTo|belongsToMany|HasMany|hasManyThrough|hasOne|hasOneThrough|morphTo|morphToMany|morphMany|morphOne|morphedByMany)\s*\(/',
-            $this->getMethodContentAsString($method)
+            (string) $this->getMethodContentAsString($method)
         );
     }
 
@@ -180,7 +184,7 @@ final class ModelsScanner
             return null;
         }
 
-        $lines = array_map('trim', array_slice($lines, $start - 1, $end - $start + 1));
+        $lines = array_map(trim(...), \array_slice($lines, $start - 1, $end - $start + 1));
         $lines = array_filter($lines, fn (string $line): bool => ! preg_match('`^(//|/\*|\*|\*/)`', $line));
 
         return implode(' ', $lines);

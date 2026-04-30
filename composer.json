@@ -16,7 +16,12 @@
     "require": {
         "php": "^8.4",
         "doctrine/dbal": "^4.4",
-        "laravel/framework": "^12.0"
+        "laravel/framework": "^12.0 || ^13.0"
+    },
+    "require-dev": {
+        "driftingly/rector-laravel": "^2.3.0",
+        "laravel/pint": "^1.29.1",
+        "rector/rector": "^2.4.2"
     },
     "autoload": {
         "psr-4": {
@@ -30,11 +35,11 @@
             ]
         }
     },
-    "config" : {
+    "config": {
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true
     },
-    "minimum-stability" : "dev",
-    "prefer-stable" : true
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }

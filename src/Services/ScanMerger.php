@@ -4,11 +4,11 @@ namespace Axn\ModelsScanner\Services;
 
 use Illuminate\Support\Str;
 
-final class ScanMerger
+final readonly class ScanMerger
 {
     public function __construct(
-        private readonly DatabaseScanner $databaseScanner,
-        private readonly ModelsScanner $modelsScanner,
+        private DatabaseScanner $databaseScanner,
+        private ModelsScanner $modelsScanner,
     ) {}
 
     public function execute(): array
@@ -67,6 +67,7 @@ final class ScanMerger
                 ];
 
                 $matchedModelRelationsIndexes[] = $matchedModelRelation->keys()->first();
+
                 continue;
             }
 
@@ -79,7 +80,7 @@ final class ScanMerger
         }
 
         foreach ($modelInfo['relations'] as $modelRelationIndex => $modelRelation) {
-            if (in_array($modelRelationIndex, $matchedModelRelationsIndexes, true)) {
+            if (\in_array($modelRelationIndex, $matchedModelRelationsIndexes, true)) {
                 continue;
             }
 
@@ -102,7 +103,7 @@ final class ScanMerger
     {
         if ($tableRelation['type'] === 'BelongsTo') {
             return Str::camel(
-                preg_replace('/^id_|_id$|(_)id_/', '$1', $tableRelation['local_column'])
+                preg_replace('/^id_|_id$|(_)id_/', '$1', (string) $tableRelation['local_column'])
             );
         }
 
