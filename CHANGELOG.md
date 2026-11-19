@@ -1,6 +1,12 @@
 Changelog
 =========
 
+1.1.2 (2026-11-19)
+------------------
+
+- Fix `hasMany` relations without return type not being detected (typo `HasMany` in the method body detection regex, which is case-sensitive)
+
+
 1.1.1 (2026-07-12)
 ------------------
 

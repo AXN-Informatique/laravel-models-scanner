@@ -158,7 +158,7 @@ final class ModelsScanner
         }
 
         return preg_match(
-            '/(\{|;)\s*return\s*\$this\s*->\s*(belongsTo|belongsToMany|HasMany|hasManyThrough|hasOne|hasOneThrough|morphTo|morphToMany|morphMany|morphOne|morphedByMany)\s*\(/',
+            '/(\{|;)\s*return\s*\$this\s*->\s*(belongsTo|belongsToMany|hasMany|hasManyThrough|hasOne|hasOneThrough|morphTo|morphToMany|morphMany|morphOne|morphedByMany)\s*\(/',
             (string) $this->getMethodContentAsString($method)
         );
     }
